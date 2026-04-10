@@ -81,10 +81,6 @@ detect_platform() {
         *)              die "Unsupported architecture: $ARCH" ;;
     esac
 
-    # macOS x86_64: use arm64 binary (runs via Rosetta 2)
-    if [ "$OS" = "darwin" ] && [ "$ARCH" = "x86_64" ]; then
-        ARCH="arm64"
-    fi
 
     PLATFORM="${OS}-${ARCH}"
 }
