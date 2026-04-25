@@ -68,32 +68,44 @@ npx skills add getsesame/skills --yes --global --all
 ## How it works
 
 ```
-   Agent                    Sesame Broker                  Upstream API
- (no secrets)              (identity & policy)              (Anthropic,
-     │                            │                          Stripe, …)
-     │  sesame request POST …     │                              │
-     ├───────────────────────────►│                              │
-     │     (no auth header)       │  ┌── 1. Verify device JWT    │
-     │                            │  ├── 2. Look up policy       │
-     │                            │  ├── 3. Telegram-approve     │
-     │                            │  │      (first hostname)     │
-     │                            │  └── 4. Inject Auth header   │
-     │                            │                              │
-     │                            ├─────────────────────────────►│
-     │                            │      (with credential)       │
-     │                            │                              │
-     │                            │◄─────────────────────────────┤
-     │                            │      (response body)         │
-     │◄───────────────────────────┤                              │
-     │       (response body,      │                              │
-     │        no credential)      │                              │
+   Agent device                Sesame Broker                  Upstream API
+                                                              (Anthropic,
+   [On login / refresh]                                        Stripe, …)
+     │  ┌── challenge: nonce ───┤
+     │◄─────────────────────────┤
+     │                          │
+     │  ── sign nonce with ────►│
+     │     device Ed25519 priv  │  ┌── verify signature
+     │                          │  │   with stored device pub key
+     │                          │  └── issue access JWT (EdDSA)
+     │◄─────────────────────────┤
+     │      (JWT)               │
+                                                                 │
+   [On every authenticated request]                              │
+     │  sesame request POST … + JWT                              │
+     ├─────────────────────────►│  ┌── 1. verify JWT sig (EdDSA) │
+     │                          │  ├── 2. check agent is active  │
+     │                          │  ├── 3. look up policy         │
+     │                          │  ├── 4. Telegram-approve       │
+     │                          │  │      (first time per host)  │
+     │                          │  └── 5. inject Auth header     │
+     │                          │                                │
+     │                          ├───────────────────────────────►│
+     │                          │       (with credential)        │
+     │                          │                                │
+     │                          │◄───────────────────────────────┤
+     │                          │       (response body)          │
+     │◄─────────────────────────┤                                │
+     │       (response body,                                     │
+     │        no credential)                                     │
 ```
 
 The broker is your trust boundary. It enforces:
 
+- **Cryptographic identity (Ed25519, end-to-end)**: on first `sesame login`, the device generates an Ed25519 keypair locally — the **private key never leaves the device**. Identity is proved via challenge-response (the device signs a broker nonce; the broker verifies with the stored public key) and only then is a short-lived JWT issued, also Ed25519-signed by the broker's own key. Every subsequent request is gated on that JWT signature. Replays, forged tokens, and in-transit tampering all fail verification.
 - **Per-hostname policy**: which methods (`GET`, `POST`, …) and path patterns are allowed for each agent.
 - **Just-in-time approval**: first request to a new hostname blocks until you tap *Approve* in the dashboard or Telegram bot. Subsequent requests within the approved window are instant.
-- **Instant revocation**: deactivating an agent invalidates all its grants in one click. Replays return `403`.
+- **Instant revocation**: deactivating an agent invalidates all its grants in one click. Replays return `403`, and any further authentication attempt with that agent's keypair surfaces as a security alert in the dashboard.
 - **Audit log**: every proxied request, every approval, every revocation, with the credential value redacted everywhere.
 
 ## Install options
