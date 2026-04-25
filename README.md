@@ -49,8 +49,10 @@ sesame request POST https://api.anthropic.com/v1/messages \
 Drop in the official skill so your agent (Claude Code, Codex, Cursor, OpenClaw, +40 more) reaches for `sesame request` instead of raw `curl` / `fetch` / `requests`:
 
 ```bash
-npx skills add getsesame/skills --yes --global --all
+npx skills add getsesame/skills
 ```
+
+Walks you through agent selection interactively. Add `--global` to install to the user-level agent directory, or `--all` to install to every agent the CLI detects.
 
 ## Commands
 
