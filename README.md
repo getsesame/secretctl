@@ -12,6 +12,10 @@ Sesame is a user-controlled broker that proxies authenticated HTTP API calls.<br
 Your agent calls `sesame request` instead of `curl` — and the broker attaches the right `Authorization` header server-side, based on the target hostname.<br/>
 **Credentials never enter the agent's prompt, never appear in logs, never touch agent memory.**
 
+<a href="https://github.com/getsesame/sesame/raw/main/docs/demo.mp4">
+  <img src="docs/demo.gif" alt="Sesame approval flow — 30-second demo" width="720">
+</a>
+
 </div>
 
 ---
